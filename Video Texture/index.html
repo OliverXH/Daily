@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Video Texture</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/110/three.js"></script>
+    <script
+        src="https://threejsfundamentals.org/threejs/resources/threejs/r113/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.bootcss.com/cannon.js/0.6.2/cannon.js"></script>
+</head>
+
+<body>
+    <div id="author">
+        <p>Made with love by 木本</p>
+    </div>
+    <video id="video" loop crossOrigin="anonymous" playsinline style="display:none">
+        <!-- <source src="video_01.ogv" type='video/ogg; codecs="theora, vorbis"'> -->
+        <source src="Bad_Apple.mp4" type='video/mp4; codecs="avc1.42E01E, mp4a.40.2"'>
+    </video>
+    <button type="button" id="start">S T A R T</button>
+    <!-- <button type="button" id="reset">R E S E T</button> -->
+    <div id="viewport"></div>
+    <script src="main.js"></script>
+</body>
+
+</html>

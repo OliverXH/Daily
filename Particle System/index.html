@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Glow</title>
+    <link rel="stylesheet" href="style.css">
+    <script src='js/three.js'></script>
+    <!-- <script src='https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.6/dat.gui.min.js'></script> -->
+    <script src='https://threejs.org/examples/js/controls/OrbitControls.js'></script>
+    <script src="js/OBJLoader.js"></script>
+    <script src="js/stats.js"></script>
+</head>
+
+<body>
+    <script type="x-shader/x-vertex" id="vertexshader">
+
+        attribute float scale;
+
+        void main() {
+
+            vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+
+            gl_PointSize = 2.0 * ( 300.0 / - mvPosition.z );
+
+            gl_Position = projectionMatrix * mvPosition;
+
+        }
+
+    </script>
+
+    <script type="x-shader/x-fragment" id="fragmentshader">
+
+        uniform vec3 color;
+
+        void main() {
+
+            if ( length( gl_PointCoord - vec2( 0.5, 0.5 ) ) > 0.5 ) discard;
+            
+            gl_FragColor = vec4( color, 1.0 );
+
+        }
+
+    </script>
+
+    <div id="ThreeJS" style="position: absolute; left:0px; top:0px"></div>
+
+    <script type="text/javascript" src="./main.js"></script>
+</body>
+
+</html>

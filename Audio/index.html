@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Audio Visualize</title>
+	<link href="text.css" type="text/css" rel="stylesheet">
+	</style>
+</head>
+
+<body>
+	<div id="overlay">
+		<div>
+			<button id="startButton">Click to Play</button>
+			<p>Made With Love By 木本</p>
+		</div>
+	</div>
+	<div class='file-area'>
+		<p class="label">
+			Upload File
+		</p>
+		<input type="file" name="FileAttachment" id="input_file" />
+	</div>
+	<!-- <button id="toImage">To Image</button> -->
+
+	<script src="three.js"></script>
+	<script src="OrbitControls.js"></script>
+	<script>
+		var startButton = document.getElementById('startButton');
+		startButton.addEventListener('click', init);
+
+		function init() {
+
+			//
+
+			var overlay = document.getElementById('overlay');
+			overlay.remove();
+
+			//
+
+			const scene = new THREE.Scene();
+			//scene.fog = new THREE.Fog(0xffffff, 0.005, 100); //打开雾化效果，(颜色，近处属性值，远处属性值)
+
+			const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1.0, 1000);
+			//设置相机的位置
+			camera.up.z = 1;
+			camera.up.x = 0;
+			camera.up.y = 0;
+			camera.position.set(20, -90, 55);
+			camera.lookAt(scene.position);
+
+			const renderer = new THREE.WebGLRenderer({
+				// canvas : canvas,
+				antialias: true,
+			});
+			renderer.setClearColor(0xeeeeee);
+			renderer.setSize(window.innerWidth, window.innerHeight);
+			renderer.shadowMap.enabled = true; //此处是告诉renderer我们需要阴影。
+			document.body.appendChild(renderer.domElement);
+
+			//创建一个平面
+			const planeGeometry = new THREE.PlaneGeometry(260, 260);
+			const planeMaterial = new THREE.MeshPhongMaterial({
+				color: 0x222222,
+				specular: 0xdddddd,
+				shininess: 5,
+				reflectivity: 2,
+				side: THREE.DoubleSide,
+			});
+			const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+			plane.receiveShadow = true;
+			scene.add(plane);
+
+			//添加光源
+			const pointLight = new THREE.PointLight(0xffffff, 0.5),
+				ambientLight = new THREE.AmbientLight(0x0c0c0c);
+
+			pointLight.position.set(0, 55, 50); //设置位置
+			pointLight.castShadow = true;
+			scene.add(pointLight);
+			scene.add(ambientLight);
+
+			const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0.7);
+			hemisphereLight.position.set(0, 10, 10)
+			scene.add(hemisphereLight);
+
+			const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
+			// directionalLight.castShadow = true;
+			directionalLight.position.set(0, -10, 50);
+			scene.add(directionalLight);
+
+			const controls = new THREE.OrbitControls(camera, renderer.domElement);
+			controls.enableDamping = true;
+			controls.dampingFactor = 0.05;
+			controls.maxPolarAngle = 1.5;
+
+			///////////////////////////////////////////////////////////
+
+			/*
+			 * 3D Text
+			 */
+			let textOptions = {
+				font: null,
+				size: 2.5,
+				height: 0.3,
+				curveSegments: 12,
+			}
+			let compleat = false;
+
+			// font loader
+			let fontLoader = new THREE.FontLoader();
+			fontLoader.load(
+				'fonts/HYChaoCuHeiJ_Regular.json',
+				(font) => {
+					compleat = true;
+					textOptions.font = font;
+
+					// text geometry
+					let textGeo = new THREE.TextGeometry('Hello World', {
+						font: textOptions.font,
+						size: textOptions.size,
+						height: textOptions.height,
+						curveSegments: textOptions.curveSegments,
+						// bevelEnabled: true,
+						// bevelThickness: 0.1,
+						// // bevelSize: 8,
+						// // bevelSegments: 5
+					});
+
+					let text = new THREE.Mesh(
+						textGeo,
+						new THREE.MeshPhongMaterial({
+							color: '#333'
+						})
+					);
+					text.name = 'text';
+					text.castShadow = true;
+					text.rotateX(Math.PI * 0.5);
+					text.position.set(-50, 0, 1);
+					console.log(text.geometry.parameters.text);
+
+					scene.add(text);
+
+					let timePan = new THREE.Mesh(
+						new THREE.TextGeometry('00:00', {
+							font: textOptions.font,
+							size: textOptions.size,
+							height: textOptions.height,
+							curveSegments: textOptions.curveSegments,
+						}),
+						new THREE.MeshPhongMaterial({
+							color: 0x333333
+						})
+					);
+					timePan.name = 'timePan';
+					timePan.castShadow = true;
+					timePan.rotateX(Math.PI * 0.5);
+					timePan.position.set(50, 0, 1);
+					// scene.add(timePan);
+				}
+			);
+
+			///////////////////////////////////////////////////////////////////
+			let barNum = Math.round(100 / 3);
+			let barWidth = 2;
+			let barThickness = 0.5;
+			let gap = 1.4;
+
+			let bars = [];
+			let material = new THREE.MeshLambertMaterial({
+				color: 0xff0000
+			});
+			let geometry = new THREE.BoxGeometry(barWidth, barThickness, 0.5);
+			for (let i = 0; i < 32; i++) {
+				let bar = new THREE.Mesh(geometry, material);
+				bar.position.set(-52 + (barWidth + gap) * i, 16, 0);
+				bar.castShadow = true;
+				bars.push(bar);
+				scene.add(bar);
+			}
+
+			// progress bar
+
+			let progressBar = {};
+			progressBar.slider = new THREE.Mesh(
+				new THREE.BoxGeometry(0.6, 0.6, 0.6),
+				new THREE.MeshPhongMaterial({
+					color: 0xff002d
+				})
+			);
+			progressBar.slider.position.set(-48, -16, 1);
+			scene.add(progressBar.slider);
+
+			progressBar.groove = new THREE.Mesh(
+				new THREE.BoxGeometry(100, 0.1, 0.1),
+				new THREE.MeshPhongMaterial({
+					color: 0x333333
+				})
+			);
+			progressBar.groove.position.set(0, -16, 1);
+			scene.add(progressBar.groove);
+
+			///////////////// audio /////////////////////
+
+			let audioContext = new AudioContext();
+			let analyser;
+			let audioBuffer;
+			let fileResult;
+			let timeLength = 0;
+			let speed;
+
+			const uploadBtn = document.getElementById('input_file');
+			uploadBtn.onchange = function() {
+				let file = fileResult = uploadBtn.files[0];
+				// timeLength = fileResult.time;
+				// console.log(file);
+
+				if (compleat) {
+					// console.log(scene.getObjectByName('text', true));	// 获得的 file对象
+					scene.getObjectByName('text', true).geometry = new THREE.TextGeometry(file.name, {
+						font: textOptions.font,
+						size: textOptions.size,
+						height: textOptions.height,
+						curveSegments: textOptions.curveSegments,
+					});
+				}
+				readFile(file);
+			}
+
+			function readFile(file) {
+
+				let fr = new FileReader();
+
+				fr.readAsArrayBuffer(file); // 设置读取方式，之后进行onload
+
+				fr.onload = function(e) {
+					// console.log(e);
+					var fileResult = e.target.result;
+
+					play(fileResult);
+				};
+
+				fr.onerror = function(e) {
+					this.processing = false;
+					console.log('!Fail to read');
+				};
+
+				console.log('Starting read the file');
+
+			}
+
+			function play(audio) {
+				// console.log(audio);
+
+				const audioCtx = audioContext;
+				const source = audioCtx.createBufferSource();
+
+				audioContext.decodeAudioData(audio).then(function(buffer) {
+					source.buffer = audioBuffer = buffer;
+					speed = 96 * 1000 / buffer.duration;
+					// console.log(buffer.duration, speed);
+					setProgressBar(buffer);
+
+					analyser = audioCtx.createAnalyser();
+					// console.log(buffer);
+
+					source.connect(analyser);
+					analyser.connect(audioCtx.destination);
+
+				})
+
+				source.start(0);
+			}
+
+
+			/////////////////////////////////////////////
+
+
+			function setProgressBar(buffer) {
+				progressBar.slider.position.x = -48;
+				let second = 00,
+					minute = 00;
+				let speed = 96 / (buffer.duration * 1000);
+
+				let start = setInterval(function() {
+					// console.log('here')
+
+					progressBar.slider.position.x += 300 * speed;
+					// console.log(progressBar.slider.position.x);
+					if (progressBar.slider.position.x >= 48) {
+						clearInterval(start);
+						progressBar.slider.position.x = -48;
+					}
+				}, 300);
+			}
+
+			function animate() {
+				requestAnimationFrame(animate);
+
+				controls.update();
+
+				if (analyser) {
+					let array = new Uint8Array(analyser.frequencyBinCount);
+					analyser.getByteFrequencyData(array); // 将获取到的频域信息存入 array 中
+
+					//let array = new Uint8Array(_analyser.frequencyBinCount); // 长度为analyser.frequencyBinCount
+					//_analyser.getByteTimeDomainData(array); // 将获取到的时域信息存入 array 中
+
+					let step = Math.round(array.length / barNum);
+					for (let i = 0; i < 32; i++) {
+						let value = array[i * step] / 2;
+						value = value > 1 ? value : 1;
+						bars[i].scale.set(1, 1, value);
+						bars[i].geometry.computeBoundingBox();
+					}
+				}
+
+				renderer.render(scene, camera);
+			}
+
+			function onResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+				renderer.setSize(window.innerWidth, window.innerHeight);
+			}
+			window.addEventListener('resize', onResize, false);
+
+			animate();
+
+			// document.getElementById('toImage').addEventListener('click', toImage);
+
+			function toImage() {
+				let canvas = renderer.domElement;
+
+				let url = canvas.toDataURL();
+				console.log(url);
+
+				canvas.toBlob(function(blob) {
+					let url = URL.createObjectURL(blob);
+					console.log(url);
+				});
+
+			}
+
+
+		}
+	</script>
+</body>
+
+</html>

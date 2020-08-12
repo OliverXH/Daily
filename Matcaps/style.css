@@ -1,0 +1,17 @@
+.bf-panel .bf-close:after, .bf-panel .bf-close:before {
+    content: '';
+    display: block;
+    width: 16px;
+    height: 1px;
+    background-color: #fff;
+    position: absolute;
+    margin-top: 8px
+}
+
+.bf-panel .bf-close:before {
+    transform: rotate(45deg)
+}
+
+.bf-panel .bf-close:after {
+    transform: rotate(-45deg)
+}

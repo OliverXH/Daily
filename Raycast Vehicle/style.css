@@ -1,0 +1,29 @@
+body {
+    overflow: hidden;
+    margin: 0;
+    background-color: #1C2E37;
+}
+
+button {
+    position: absolute;
+    z-index: 10;
+    top: 30px;
+    left: 30px;
+    width: 40px;
+    height: 40px;
+    border: 0px;
+    border-radius: 3px;
+    /* background-color: #fff; */
+    background-size: 100% auto;
+    background-image: url(assert/changeCam.png);
+    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+    font-size: 14px;
+    transition-duration: 0.5s;
+}
+
+/* button:hover{
+    transition-duration: 0.5s;
+    color: white;
+    background-color: transparent;
+    border: 1px solid white;
+} */

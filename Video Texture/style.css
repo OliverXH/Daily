@@ -1,0 +1,42 @@
+body{
+    margin: 0;
+    overflow: hidden;
+    background-color: #333333;
+    font-size: 20px;
+}
+
+#author {
+    z-index: 20;
+    position: absolute;
+    width:100%;
+    top: 15px;
+  /*   left: 30px; */
+    font-family: "Lato";
+    font-size: 30px;
+    color:white;
+    text-align: center;
+  }
+
+video{
+    display:none;
+}
+
+#start{
+    background: transparent;
+    color: aliceblue;
+    width: 280px;
+    height: 60px;
+    position: absolute;
+    left: calc(50% - 140px);
+    bottom: calc(50% - 30px);
+    border: 1px solid #ffffff;
+    border-radius: 3px;
+    cursor: pointer;
+    transition-duration: 600ms;
+}
+
+#start:hover{
+    /* box-shadow:0 0 10px rgb(208, 208, 209); */
+    background: #ffffff;
+    color: #000000;
+}

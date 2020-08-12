@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Dissolve</title>
+    <link rel="stylesheet" href="style.css">
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/three.js/110/three.js'></script>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.6/dat.gui.min.js'></script>
+    <script src='OrbitControls.js'></script>
+    <script src="OBJLoader.js"></script>
+</head>
+
+<body>
+    <!-- vertext shader a.k.a. pixel shader -->
+    <script id="vertexShader" type="x-shader/x-vertex">
+        varying vec2 vUv;
+
+        void main()
+        {
+            vUv = uv;
+            
+            //projectionMatrix * mvPosition; 最终得到MVP矩阵
+            gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+
+        }
+    </script>
+
+    <!-- fragment shader a.k.a. pixel shader -->
+    <script id="fragmentShader" type="x-shader/x-vertex">
+        
+        uniform float threshold;
+        uniform float edgeWidth;
+        uniform float edgeBrightness;
+        uniform vec3 edgeColor;
+
+        uniform sampler2D mainTex;      // 获取纹理
+        uniform sampler2D  noiseTex;    // 需要使用的噪点图片
+        
+        varying vec2 vUv;   // 纹理坐标
+
+        void main(void){
+            
+            // float threshold = 0.5;
+
+            // texture2D()获取颜色值
+
+            vec4 color = texture2D(mainTex, vUv);
+            // 纹理贴图中该点处的颜色值(r, g, b, a)
+
+            vec4 noiseValue = texture2D(noiseTex, vUv);
+            // 噪点图片中该点处的颜色值(r, g, b, a)，r == g == b
+            
+            if(noiseValue.r < threshold)
+            {
+                discard;
+            }
+
+            if(noiseValue.r-edgeWidth < threshold){
+                color = vec4(edgeColor, 1.0);
+            }
+
+            gl_FragColor = color;
+        }
+    </script>
+
+    <div id="ThreeJS" style="position: absolute; left:0px; top:0px"></div>
+
+    <script type="text/javascript" src="main.js"></script>
+</body>
+
+</html>

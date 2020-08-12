@@ -1,0 +1,31 @@
+body {
+  overflow: hidden;
+  background: #A1DBB2;
+  margin: 0;
+}
+
+div, canvas {
+  position: absolute;
+}
+
+#text {
+  z-index: 200;
+  display: none;
+}
+
+input {
+  z-index: 400;
+  position: absolute;
+  text-transform: uppercase;
+  width: 90%;
+  bottom: 20px;
+  background: none;
+  outline: none;
+  border: none;
+  font-size: 30px;
+  color: #222;
+  font-weight: bold;
+  text-align: center;
+  border-bottom: 1px solid #333;
+  left: 5%;
+}

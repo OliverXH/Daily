@@ -1,0 +1,59 @@
+body{
+    overflow: hidden;
+    margin: 0;
+}
+
+#info{
+    position: absolute;
+    z-index: 10;
+    color: white;
+    text-align: center;
+    width: 100%;
+    top: 20px;
+    font-weight: 100;
+    font-size: smaller;
+    letter-spacing: 1px;
+    line-height: 20px;
+}
+
+/* #panel{
+    position: absolute;
+    z-index: 10;
+    left: 0;
+    bottom: 0;
+    width: 100px;
+    height: 100px;
+    background-color: #282828;
+    border-radius: 0 100% 0 0;
+}
+
+#panel>div{
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 50px;
+    height: 50px;
+    background-color: #242424;
+    border-radius: 0 100% 0 0;
+    box-shadow: 0 0 50px rgb(87, 84, 84) ;
+} */
+
+#mode{
+    position: absolute;
+    z-index: 10;
+    left: calc(50% - 190px);
+    bottom: 20px;
+    width: 380px;
+    height: 50px;
+    background-color: #d6d6d6;
+}
+
+button{
+    position: absolute;
+    border: none;
+    background-size: 100% auto;
+    width: 100px;
+    height: 30px;
+    top: 10px;
+}
+

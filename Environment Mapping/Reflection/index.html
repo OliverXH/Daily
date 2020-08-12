@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Glow</title>
+    <link rel="stylesheet" href="style.css">
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/three.js/110/three.js'></script>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.6/dat.gui.min.js'></script>
+    <script src='https://threejsfundamentals.org/threejs/resources/threejs/r113/examples/js/controls/OrbitControls.js'></script>
+</head>
+
+<body>
+    <!-- vertext shader a.k.a. pixel shader -->
+    <script id="vertexShader" type="x-shader/x-vertex">
+        varying vec3 vPosition;
+        varying vec3 R;
+        
+        void main()
+        {
+            vec4 positionW = modelMatrix * vec4( position, 1.0 );
+            vPosition = positionW.xyz;
+            
+            vec3 N = ( mat3( modelMatrix ) * normal );
+            // vec3 N = (modelMatrix * vec4( position, 1.0 )).xyz - (modelMatrix * vec4( position + normal, 1.0 )).xyz;
+            N = normalize(N);
+                        
+            vec3 I = vec3(positionW.xyz) - cameraPosition;
+            R = reflect(I, N);
+                
+            gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+
+        }
+    </script>
+    <!-- fragment shader a.k.a. pixel shader -->
+    <script id="fragmentShader" type="x-shader/x-vertex">
+        uniform float reflectivity;
+        uniform samplerCube skyBox;
+        
+        varying vec3 vPosition;
+        varying vec3 R;
+
+        void main(void)
+        {       
+            vec4 reflectedColor = textureCube(skyBox, R);
+
+            gl_FragColor = reflectedColor;
+        }
+
+    </script>
+    <div id="ThreeJS" style="position: absolute; left:0px; top:0px"></div>
+    <script type="text/javascript" src="main.js"></script>
+</body>
+
+</html>

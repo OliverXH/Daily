@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Glow</title>
+    <link rel="stylesheet" href="style.css">
+
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.6/dat.gui.min.js'></script>
+
+    <!-- <script src='js/three.js'></script>
+    <script src='js/OrbitControls.js'></script>
+    <script src='js/TransformControls.js'></script> -->
+</head>
+
+<body>
+    <div id="info">
+        "T" translate | "R" rotate | "S" scale | "+/-" adjust size<br />
+        "Q" toggle world/local space | "Shift" snap to grid<br />
+        "X" toggle X | "Y" toggle Y | "Z" toggle Z | "Spacebar" toggle enabled<br />
+        "C" toggle camera | "V" random zoom
+    </div>
+
+    <!-- <div id="panel">
+        <div>
+            <img src="assert/cube.png" style="position: absolute; width: 30px; height: 30px; left: 5px; bottom: 5px;">
+        </div>
+        <img src="assert/translate.png" style="position: absolute; width: 30px; height: 30px; left: 5px; top: 5px;">
+        <button
+            style="position: absolute; background-image: url(assert/rotate.png); width: 30px; height: 30px; left: 34px; top: 27px;">
+        </button>
+    </div> -->
+
+    <div id="mode">
+        <button id="translate" style="left: 20px;">Translate</button>
+        <button id="rotate" style="left: 140px;">Rotate</button>
+        <button id="scale" style="right: 20px;">Scale</button>
+    </div>
+
+    <script type="module" src="main.js"></script>
+</body>
+
+</html>

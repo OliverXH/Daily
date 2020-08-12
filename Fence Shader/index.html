@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Glow</title>
+    <link rel="stylesheet" href="style.css">
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/three.js/110/three.js'></script>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.6/dat.gui.min.js'></script>
+    <script
+        src='https://threejsfundamentals.org/threejs/resources/threejs/r113/examples/js/controls/OrbitControls.js'></script>
+</head>
+
+<body>
+    <!-- vertext shader a.k.a. pixel shader -->
+    <script id="vertexShader" type="x-shader/x-vertex">
+        #define GLSLIFY 1;
+        varying vec3 vPosition;
+        varying vec3 vModelPosition;
+        varying vec2 vUv;
+        
+        void main()
+        {
+            vec4 modelPosition = modelMatrix * vec4(position, 1.0);		// 世界坐标系
+            gl_Position = projectionMatrix * viewMatrix * modelPosition;
+    
+            vPosition = position.xyz;		// 本地坐标系（模型坐标系）
+            vModelPosition = modelPosition.xyz;
+            vUv = uv;
+        }
+    </script>
+
+    <!-- fragment shader a.k.a. pixel shader -->
+    <script id="fragmentShader" type="x-shader/x-fragment">
+        uniform float uTime;
+        uniform float uBorderAlpha;
+        uniform float uStrikeAlpha;
+        
+        varying vec3 vPosition;
+        varying vec3 vModelPosition;
+        varying vec2 vUv;
+        
+        void main()
+        {
+            float uStrikeWidth = 0.5;
+            // float uStrikeAlpha = 0.25;
+            float uBorderWidth = 0.1;
+            // float uBorderAlpha = 0.5;
+
+            if(vModelPosition.z < 0.0)
+            {        
+                discard;
+            }    
+            
+            float strikeStrength = mod((vPosition.x + vPosition.y - uTime * 0.00035 + vPosition.z) / uStrikeWidth * 0.5, 1.0);
+            strikeStrength = step(strikeStrength, 0.5) * uStrikeAlpha;
+
+            float borderStrength = max(step(1.0 - vUv.y, uBorderWidth), step(vUv.y, uBorderWidth)) * uBorderAlpha;
+
+            float alpha = max(strikeStrength, borderStrength);
+
+            gl_FragColor = vec4(vec3(1.0), alpha);
+
+            // gl_FragColor = vec4(vUv, 1.0, 1.0);
+        }
+    </script>
+
+    <div id="viewport"></div>
+
+    <script type="module" src="main.js"></script>
+</body>
+
+</html>

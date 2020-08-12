@@ -1,0 +1,44 @@
+body{
+    margin: 0;
+    overflow: hidden;
+}
+
+#author {
+    position: absolute;
+    top: 15px;
+    left: 30px;
+    font-family: "Lato";
+    font-size: 15px;
+    color:white;
+    text-align: center;
+}
+
+button{
+    position: absolute;
+    left: calc(50% - 60px);
+    margin: auto;
+    border: 3px solid #333333;
+    font-size: 15px;
+    width: 120px;
+    height: 30px;
+    cursor: pointer;
+    color: white;
+    background: #666666;
+    opacity: 0.8;
+}
+
+button:hover{
+    box-shadow: 0 0 7px #000000;
+}
+
+#start{
+    
+    bottom: 100px;
+
+}
+
+#reset{
+
+    bottom: 50px;
+
+}

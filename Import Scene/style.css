@@ -1,0 +1,14 @@
+body{
+    margin: 0;
+    overflow: hidden;
+}
+
+#author {
+    position: absolute;
+    top: 15px;
+    left: 30px;
+    font-family: "Lato";
+    font-size: 15px;
+    color:white;
+    text-align: center;
+}

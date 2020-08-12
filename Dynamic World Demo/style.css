@@ -1,0 +1,27 @@
+body {
+    overflow: hidden;
+    margin: 0;
+    background-color: #1C2E37;
+}
+
+#start {
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    width: 120px;
+    height: 40px;
+    letter-spacing: 3px;
+    font-weight: bolder;
+    /* border: 1px solid white;
+    font-size: 20px;
+    color: #fff;
+    background-color: rgba(0, 0, 0, 0); */
+    transition-duration: 0.5s;
+}
+
+#start:hover {
+    transition-duration: 0.5s;
+    color: white;
+    background-color: transparent;
+    border: 1px solid white;
+}

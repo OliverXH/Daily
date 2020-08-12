@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Glow</title>
+    <link rel="stylesheet" href="style.css">
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/three.js/110/three.js'></script>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.6/dat.gui.min.js'></script>
+    <script
+        src='https://threejsfundamentals.org/threejs/resources/threejs/r113/examples/js/controls/OrbitControls.js'></script>
+</head>
+
+<body>
+    <!-- vertext shader a.k.a. pixel shader -->
+    <script id="vertexShader" type="x-shader/x-vertex">
+
+        // uniform vec3 light_pos;
+
+        varying vec3 vPosition;
+        varying vec3 vNormal;
+        varying vec2 vUv;
+        varying vec3 light_pos;
+        //varying vec4 color;
+
+        void main()
+        {
+            
+            vPosition = (modelViewMatrix * vec4( position, 1.0 )).xyz;
+            vNormal = normalMatrix * normal;
+            vUv = uv;
+
+            light_pos = (viewMatrix * vec4(100.0, 100.0, 100.0, 1.0)).xyz;
+
+            /*
+            // Lighting constants
+            const vec3 light_pos = vec3(100.0, 100.0, 100.0);
+            const vec4 ambientColor = vec4(0.1, 0.1, 0.2, 1.0);
+            const vec4 diffuseColor = vec4(0.7, 0.65, 0.65, 1.0);
+            const vec4 specularColor = vec4(0.7, 0.7, 0.7, 1.0);
+            const float specular_power = 128.0;
+
+            vec3 N = normalize(vNormal);
+            vec3 V = normalize(-vPosition);
+            vec3 L = normalize(light_pos - vPosition);
+            vec3 R = reflect(-L, N);
+            vec3 H = normalize(V + L);
+
+            vec4 diffuse = max(0.0, dot(N, L)) * diffuseColor;
+
+            vec4 specular = pow( max(0.0, dot(R, V)), specular_power ) * specularColor;
+
+            color = ambientColor + diffuse + specular;
+            */
+
+            gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+        }
+
+    </script>
+    <!-- fragment shader a.k.a. pixel shader -->
+    <script id="fragmentShader" type="x-shader/x-vertex">
+
+    uniform float reflectivity;
+    uniform samplerCube skyBox;
+    
+    varying vec3 vPosition;
+    varying vec3 vNormal;
+    varying vec2 vUv;
+    varying vec3 light_pos;
+    //varying vec4 color;
+
+    void main(void)
+    {
+        // Lighting constants
+        // const vec3 light_pos = vec3(100.0, 100.0, 100.0);
+        const vec4 ambientColor = vec4(0.1, 0.1, 0.2, 1.0);
+        const vec4 diffuseColor = vec4(0.7, 0.65, 0.65, 1.0);
+        const vec4 specularColor = vec4(0.7, 0.7, 0.7, 1.0);
+        const float specular_power = 128.0;
+
+        vec3 N = normalize(vNormal);    // 对法向量进行插值
+        vec3 V = normalize(-vPosition);
+        vec3 L = normalize(light_pos - vPosition);
+        vec3 R = reflect(-L, N);
+        vec3 H = normalize(V + L);
+
+        vec4 diffuse = max(0.0, dot(N, L)) * diffuseColor;
+
+        vec4 specular = pow( max(0.0, dot(R, V)), specular_power ) * specularColor;
+        
+        gl_FragColor = ambientColor + diffuse + specular;
+    }
+
+</script>
+
+    <div id="ThreeJS" style="position: absolute; left:0px; top:0px"></div>
+
+    <script type="text/javascript" src="main.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>skulpt.js - Terrain</title>
+    <meta charset="UTF-8" />
+
+    <link rel="stylesheet" href="css/style.css">
+
+    <!--load 3D libraries-->
+    <script type="text/javascript" src="js/new-threejs/three.js"></script>
+    <script type="text/javascript" src="js/new-threejs/stats.js"></script>
+    <script type="text/javascript" src="js/new-threejs/OrbitControls.js"></script>
+    <script type="text/javascript" src="js/dat.gui/dat.gui.js"></script>
+
+    <!--load terrain libraries-->
+    <script type="text/javascript" src="three-sculpt.js"></script>
+
+    <script>
+
+        let TERRAIN_RES = 256;
+        let TERRAIN_SIZE = 10;
+        let TERRAIN_SCULPT_SIZE = 1.5;
+        let TERRAIN_SCULPT_AMOUNT = 0.04;
+
+        let SHADOW_MAP_RES = 1024;
+
+        let clock = new THREE.Clock();
+
+        let gpuSculpt;
+
+        let options = {
+            sculptSize: TERRAIN_SCULPT_SIZE,
+            sculptAmount: TERRAIN_SCULPT_AMOUNT,
+            sculptClearSculpts: function () {
+                gpuSculpt.clear();
+            },
+            renderingShadows: true,
+            renderingShadowCasters: false,
+            displaySculptTexture: true
+        };
+
+        let renderer, scene, camera, globalTransform;
+        let keyLight, fillLight;
+        let controls;
+        let materials = [];
+        let groundPlaneMesh;
+        function setupScene() {
+
+            // SCENE
+            scene = new THREE.Scene();
+
+            // CAMERA
+            camera = new THREE.PerspectiveCamera(
+                45,
+                window.innerWidth / window.innerHeight,
+                0.1,
+                5000
+            );
+            camera.position.set(-4, 3, 5);
+            camera.lookAt(scene.position);
+
+            // RENDERER
+            renderer = new THREE.WebGLRenderer(/*{ antialias: true }*/);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0xbfd1e5);
+            document.body.appendChild(renderer.domElement);
+            // renderer.shadowMap.enabled = true;
+
+            //添加光源
+            const pointLight = new THREE.PointLight(0xffffff),
+                ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+
+            pointLight.position.set(50, 55, 50); //设置位置
+            pointLight.castShadow = true;
+            scene.add(pointLight);
+            scene.add(ambientLight);
+
+            //gridHelper
+            scene.add(new THREE.GridHelper(20, 10));
+
+            let directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(5, 15, -15);
+            directionalLight.castShadow = true;
+            let d = 15
+            directionalLight.shadow.camera.left = -d;
+            directionalLight.shadow.camera.right = d;
+            directionalLight.shadow.camera.top = d;
+            directionalLight.shadow.camera.bottom = -d;
+            directionalLight.shadow.camera.near = 2;
+            directionalLight.shadow.camera.far = 500;
+            directionalLight.shadow.mapSize.x = 1024;
+            directionalLight.shadow.mapSize.y = 1024;
+            scene.add(directionalLight);
+
+            let fillLight = new THREE.DirectionalLight(0x33DDFF, 0.4);
+            fillLight.position.set(5, 2, 15);
+            fillLight.target.position.set(0, 0, 0);
+            scene.add(fillLight);
+
+            // CONTROLS
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+            //create plane for reference and for intersection test
+            let groundPlaneGeom = new THREE.PlaneGeometry(TERRAIN_SIZE, TERRAIN_SIZE, 1, 1);  //much faster for intersection test when there are no divisions
+            groundPlaneGeom.rotateX(-Math.PI / 2);
+            let groundPlaneMaterial = new THREE.MeshPhongMaterial();
+            materials.push(groundPlaneMaterial);
+            groundPlaneMesh = new THREE.Mesh(groundPlaneGeom, groundPlaneMaterial);
+            groundPlaneMesh.name = "groundPlaneMesh";
+            groundPlaneMesh.castShadow = true;
+            groundPlaneMesh.receiveShadow = true;
+            groundPlaneMesh.visible = false;
+            scene.add(groundPlaneMesh);
+
+            /*
+            * Events to fire upon window resizing.
+            */
+            window.addEventListener("resize", onWindowResize, false);
+            function onWindowResize() {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+        }
+
+        let terrainGeom, terrainMesh;
+        let visGeom, visMaterial, visMesh;
+        let rayCaster = new THREE.Raycaster(),
+            mouse = new THREE.Vector2();
+        function setupSculpt() {
+
+            //create a terrain mesh for sculpting
+            terrainGeom = new THREE.PlaneGeometry(TERRAIN_SIZE, TERRAIN_SIZE, TERRAIN_RES - 1, TERRAIN_RES - 1);
+            terrainGeom.rotateX(-Math.PI / 2);
+            terrainMesh = new THREE.Mesh(terrainGeom, null);
+            terrainMesh.name = "terrainMesh";
+            terrainMesh.castShadow = true;
+            terrainMesh.receiveShadow = true;
+            scene.add(terrainMesh);
+
+            //create a GPUSculpt
+            gpuSculpt = new GPUSculpt({
+                renderer: renderer,
+                mesh: terrainMesh,
+                size: TERRAIN_SIZE,
+                res: TERRAIN_RES
+            });
+            // gpuSculpt.setBrushSize(1.5);
+            gpuSculpt.enableGUI();
+
+            // gpuSculpt.loadFromImage('./images/img1.jpg', 0.1, false);
+
+            let sculpting = false;
+
+            //create a RTT visualization plane
+            visGeom = new THREE.PlaneGeometry(TERRAIN_SIZE, TERRAIN_SIZE, 1, 1);
+            visGeom.rotateX(-Math.PI / 2);
+            visMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, map: gpuSculpt.getSculptDisplayTexture() });
+            materials.push(visMaterial);
+            visMesh = new THREE.Mesh(visGeom, visMaterial);
+            visMesh.name = "visMesh";
+            visMesh.position.x = TERRAIN_SIZE;
+            visMesh.castShadow = false;
+            visMesh.receiveShadow = false;
+            scene.add(visMesh);
+
+            window.addEventListener('keydown', (event) => {
+                // console.log(event.keyCode);
+                if (event.keyCode == 83) {
+
+                    sculpting = true;
+                    controls.enabled = false;
+
+                }
+            });
+            window.addEventListener('keyup', (event) => {
+                // console.log(event.keyCode);
+                if (event.keyCode == 83) {
+
+                    sculpting = false;
+                    controls.enabled = true;
+
+                }
+            });
+
+            document.addEventListener('mousedown', onMouseDown, false);
+
+            function onMouseDown(e) {
+
+                document.addEventListener('mousemove', onMouseMove, false);
+                document.addEventListener('mouseup', onMouseUp, false);
+
+                if (sculpting) {
+
+                    let intersectPoint = getPosition(e);
+                    showBrush(intersectPoint);
+                    sculpt(intersectPoint);
+                    // console.log(intersectPoint);
+                }
+            }
+
+            function onMouseMove(e) {
+                if (sculpting) {
+
+                    let intersectPoint = getPosition(e);
+                    showBrush(intersectPoint);
+                    sculpt(intersectPoint);
+                    // console.log(intersectPoint);
+                }
+            }
+
+            function onMouseUp(e) {
+                // gpuSculpt.hideCursor();
+
+                document.removeEventListener('mousemove', onMouseMove, false);
+                document.removeEventListener('mouseup', onMouseUp, false);
+            }
+
+            function getPosition(e) {
+
+                // 将鼠标位置归一化为设备坐标。x 和 y 方向的取值范围是 (-1 to +1)
+                mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = - (e.clientY / window.innerHeight) * 2 + 1;
+
+                rayCaster.setFromCamera(mouse, camera);
+
+                let intersectInfo = rayCaster.intersectObject(groundPlaneMesh);
+
+                //get intersection point
+                if (intersectInfo && intersectInfo[0]) {
+                    // console.log(intersectInfo);
+                    return intersectInfo[0].point;
+                }
+
+                return null;
+            }
+
+            function sculpt(intersectPoint) {
+                if (intersectPoint) {
+                    //do actual sculpting if clicked
+                    if (event.button === 0) {  //LMB
+                        // isSculpting = true;
+                        gpuSculpt.sculpt(GPUSculpt.ADD, intersectPoint, options.amount);
+                    } else if (event.button === 2) {  //RMB
+                        // isSculpting = true;
+                        gpuSculpt.sculpt(GPUSculpt.REMOVE, intersectPoint, options.amount);
+                    }
+                }
+            }
+
+            function showBrush(intersectPoint) {
+                if (intersectPoint) {
+                    // console.log("show cursor");
+                    //show cursor at intersection point
+                    gpuSculpt.updateCursor(intersectPoint);
+                    gpuSculpt.showCursor();
+                } else {
+                    //cursor is out of terrain, so hide it, otherwise it will remain at the edge
+                    gpuSculpt.hideCursor();
+                }
+            }
+        }
+
+        window.onload = function () {
+
+            console.log('Document is ready.');
+
+            //setup scene
+            setupScene();
+
+            //setup Sculpt
+            setupSculpt();
+
+            //main loop
+            function loop() {
+
+                let dt = clock.getDelta();  //have to call this before getElapsedTime()
+                let time = clock.getElapsedTime();
+                
+                visMaterial.map = gpuSculpt.getSculptDisplayTexture();
+
+                renderer.autoClear = false;
+                renderer.clear();
+                gpuSculpt.update(dt);
+                renderer.render(scene, camera);
+
+                controls.update();
+
+                requestAnimationFrame(loop);
+            }
+            loop();
+        };
+    </script>
+</head>
+
+<body>
+    <div id="threejs-container"></div>
+    <div class="translucent" id="info-container">
+        <div>Camera: [ LMB: rotate ] [ MMB: pan ] [ Alt+RMB: zoom ]</div>
+        <div>Sculpt: [ KeyS+LMB: add ] [ KeyS+RMB: remove ] </div>
+    </div>
+</body>
+
+</html>
