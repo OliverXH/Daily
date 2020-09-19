@@ -24,21 +24,21 @@ let GPUSculpt = (function () {
             return;
         }
 
-        if (typeof options.mesh === 'undefined') {
-            throw new Error('mesh not specified');
+        if (typeof options.mesh === "undefined") {
+            throw new Error("mesh not specified");
         }
         this.mesh = options.mesh;
-        if (typeof options.renderer === 'undefined') {
-            throw new Error('renderer not specified');
+        if (typeof options.renderer === "undefined") {
+            throw new Error("renderer not specified");
         }
         this.renderer = options.renderer;
-        if (typeof options.size === 'undefined') {
-            throw new Error('size not specified');
+        if (typeof options.size === "undefined") {
+            throw new Error("size not specified");
         }
         this.size = options.size;
         this.halfSize = this.size / 2.0;
-        if (typeof options.res === 'undefined') {
-            throw new Error('res not specified');
+        if (typeof options.res === "undefined") {
+            throw new Error("res not specified");
         }
         this.res = options.res;
 
@@ -50,9 +50,9 @@ let GPUSculpt = (function () {
         this.isSculpting = false;
         this.sculptUvPos = new THREE.Vector2();
 
-        this.cursorHoverColor = new THREE.Vector3(0.4, 0.4, 0.4);
-        this.cursorAddColor = new THREE.Vector3(0.3, 0.5, 0.1);
-        this.cursorRemoveColor = new THREE.Vector3(0.5, 0.2, 0.1);
+        this.cursorHoverColor = new THREE.Vector3(1.0, 0.5, 0.0);
+        this.cursorAddColor = new THREE.Vector3(1.0, 0.5, 0.0);
+        this.cursorRemoveColor = new THREE.Vector3(1.0, 0.5, 0.0);
 
         this.shouldClear = false;
 
@@ -61,7 +61,7 @@ let GPUSculpt = (function () {
             magFilter: THREE.LinearFilter,		// default
             wrapS: THREE.ClampToEdgeWrapping,	// default
             wrapT: THREE.ClampToEdgeWrapping,	// default
-            format: THREE.RGBFormat,			// default
+            format: THREE.RGBAFormat,			// default
             stencilBuffer: false,
             depthBuffer: false,
             type: THREE.FloatType
@@ -96,7 +96,7 @@ let GPUSculpt = (function () {
                 "   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);",
                 "}"
 
-            ].join('\n'),
+            ].join("\n"),
 
             heightMap: [
 
@@ -107,19 +107,35 @@ let GPUSculpt = (function () {
                 "uniform vec2 uTexelWorldSize;",
                 "uniform float uHeightMultiplier;",
 
-                "varying vec3 vViewPos;",
+                "varying vec3 vViewPosition;",
                 "varying vec3 vViewNormal;",
                 "varying vec2 vUv;",
 
+                THREE.ShaderChunk['common'],
+                // THREE.ShaderChunk['bsdfs'],
+                THREE.ShaderChunk['shadowmap_pars_vertex'],
+
                 "void main() {",
 
+                // THREE.ShaderChunk['uv_vertex'],
+                // THREE.ShaderChunk['uv2_vertex'],
+                // THREE.ShaderChunk['color_vertex'],
+                THREE.ShaderChunk['beginnormal_vertex'],
+                //THREE.ShaderChunk['morphnormal_vertex'],
+                //THREE.ShaderChunk['skinbase_vertex'],
+                //THREE.ShaderChunk['skinnormal_vertex'],
+                THREE.ShaderChunk['defaultnormal_vertex'],
+                // THREE.ShaderChunk['begin_vertex'],
+
                 "   vUv = uv;",
+                //"	vUv = vec2(4.0 * uv.x, 4.0 * uv.y);",
 
                 //displace y based on texel value
                 "   vec4 t = texture2D(uTexture, vUv) * uHeightMultiplier;",
                 "   vec3 displacedPos = position;",
                 // "if(t.r>2.0)",
                 "	displacedPos = vec3(position.x, t.r, position.z);",
+                // "   vPosition = displacedPos;",
 
                 //find normal
                 "   vec2 du = vec2(uTexelSize.r, 0.0);",    // increment
@@ -134,7 +150,7 @@ let GPUSculpt = (function () {
 
                 "   vec4 worldPosition = modelMatrix * vec4(displacedPos, 1.0);",
                 "   vec4 viewPos = modelViewMatrix * vec4(displacedPos, 1.0);",
-                "   vViewPos = viewPos.rgb;",
+                "   vViewPosition = viewPos.rgb;",
 
                 "   gl_Position = projectionMatrix * viewPos;",
 
@@ -142,7 +158,7 @@ let GPUSculpt = (function () {
 
                 "}"
 
-            ].join('\n')
+            ].join("\n")
 
         },
 
@@ -198,7 +214,7 @@ let GPUSculpt = (function () {
                 "   gl_FragColor = t1;",
                 "}"
 
-            ].join('\n'),
+            ].join("\n"),
 
             combineTextures: [
 
@@ -215,7 +231,7 @@ let GPUSculpt = (function () {
                 // "	gl_FragColor = vec4(3.0, 0.0, 0.0, 0.0) + vec4(color2.rgb, 0.0);",	
                 "}"
 
-            ].join('\n'),
+            ].join("\n"),
 
             setColor: [
 
@@ -227,7 +243,106 @@ let GPUSculpt = (function () {
                 "   gl_FragColor = uColor;",
                 "}"
 
-            ].join('\n'),
+            ].join("\n"),
+
+            lambert: [
+                "uniform vec3 diffuse;",
+                "uniform vec3 emissive;",
+                "uniform float opacity;",
+
+                "varying vec3 vLightFront;",
+                "varying vec3 vIndirectFront;",
+
+                "#ifdef DOUBLE_SIDED",
+                "    varying vec3 vLightBack;",
+                "    varying vec3 vIndirectBack;",
+                "#endif",
+
+
+                THREE.ShaderChunk['common'],
+                THREE.ShaderChunk['packing'],
+                THREE.ShaderChunk['dithering_pars_fragment'],
+                THREE.ShaderChunk['color_pars_fragment'],
+                THREE.ShaderChunk['uv_pars_fragment'],
+                THREE.ShaderChunk['uv2_pars_fragment'],
+                THREE.ShaderChunk['map_pars_fragment'],
+                THREE.ShaderChunk['alphamap_pars_fragment'],
+                THREE.ShaderChunk['aomap_pars_fragment'],
+                THREE.ShaderChunk['lightmap_pars_fragment'],
+                THREE.ShaderChunk['emissivemap_pars_fragment'],
+                THREE.ShaderChunk['envmap_common_pars_fragment'],
+                THREE.ShaderChunk['envmap_pars_fragment'],
+                THREE.ShaderChunk['cube_uv_reflection_fragment'],
+                THREE.ShaderChunk['bsdfs'],
+                THREE.ShaderChunk['lights_pars_begin'],
+                THREE.ShaderChunk['fog_pars_fragment'],
+                THREE.ShaderChunk['shadowmap_pars_fragment'],
+                THREE.ShaderChunk['shadowmask_pars_fragment'],
+                THREE.ShaderChunk['specularmap_pars_fragment'],
+                THREE.ShaderChunk['logdepthbuf_pars_fragment'],
+                THREE.ShaderChunk['clipping_planes_pars_fragment'],
+
+                "void main() {",
+
+                THREE.ShaderChunk['clipping_planes_fragment'],
+
+                "    vec4 diffuseColor = vec4( diffuse, opacity );",
+                "    ReflectedLight reflectedLight = ReflectedLight( vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ) );",
+                "    vec3 totalEmissiveRadiance = emissive;",
+
+                THREE.ShaderChunk['logdepthbuf_fragment'],
+                THREE.ShaderChunk['map_fragment'],
+                THREE.ShaderChunk['color_fragment'],
+                THREE.ShaderChunk['alphamap_fragment'],
+                THREE.ShaderChunk['alphatest_fragment'],
+                THREE.ShaderChunk['specularmap_fragment'],
+                THREE.ShaderChunk['emissivemap_fragment'],
+
+                // accumulation
+
+                "    #ifdef DOUBLE_SIDED",
+
+                "        reflectedLight.indirectDiffuse += ( gl_FrontFacing ) ? vIndirectFront : vIndirectBack;",
+
+                "    #else",
+
+                "        reflectedLight.indirectDiffuse += vIndirectFront;",
+
+                "    #endif",
+
+                THREE.ShaderChunk['lightmap_fragment'],
+
+                "    reflectedLight.indirectDiffuse *= BRDF_Diffuse_Lambert( diffuseColor.rgb );",
+
+                "    #ifdef DOUBLE_SIDED",
+
+                "        reflectedLight.directDiffuse = ( gl_FrontFacing ) ? vLightFront : vLightBack;",
+
+                "    #else",
+
+                "        reflectedLight.directDiffuse = vLightFront;",
+
+                "    #endif",
+
+                "    reflectedLight.directDiffuse *= BRDF_Diffuse_Lambert( diffuseColor.rgb ) * getShadowMask();",
+
+                // modulation
+
+                THREE.ShaderChunk['aomap_fragment'],
+
+                "    vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + totalEmissiveRadiance;",
+
+                THREE.ShaderChunk['envmap_fragment'],
+
+                "    gl_FragColor = vec4( outgoingLight, diffuseColor.a );",
+
+                THREE.ShaderChunk['tonemapping_fragment'],
+                THREE.ShaderChunk['encodings_fragment'],
+                THREE.ShaderChunk['fog_fragment'],
+                THREE.ShaderChunk['premultiplied_alpha_fragment'],
+                THREE.ShaderChunk['dithering_fragment'],
+                "}",
+            ].join("\n"),
 
             lambertCursor: [
 
@@ -235,11 +350,17 @@ let GPUSculpt = (function () {
                 //This is the version that overlays a circular cursor patch.
 
                 THREE.ShaderChunk['common'],
+                THREE.ShaderChunk['packing'],
                 THREE.ShaderChunk['bsdfs'],
+
+                // THREE.ShaderChunk['map_pars_fragment'],
+
                 THREE.ShaderChunk['lights_pars_begin'],
+                THREE.ShaderChunk['lights_pars_maps'],
                 THREE.ShaderChunk['shadowmap_pars_fragment'],
                 THREE.ShaderChunk['shadowmask_pars_fragment'],
 
+                "uniform sampler2D map;",
                 "uniform vec3 uBaseColor;",
 
                 "uniform int uShowCursor;",
@@ -247,7 +368,7 @@ let GPUSculpt = (function () {
                 "uniform float uCursorRadius;",
                 "uniform vec3 uCursorColor;",
 
-                "varying vec3 vViewPos;",
+                "varying vec3 vViewPosition;",
                 "varying vec3 vViewNormal;",
                 "varying vec2 vUv;",
 
@@ -261,18 +382,39 @@ let GPUSculpt = (function () {
                 "void main() {",
 
                 //diffuse component
+
+                // "vec4 diffuseColor = vec4( diffuse, opacity );",
+
+                // "ReflectedLight reflectedLight = ReflectedLight( vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ) );",
+
+                // "vec3 totalEmissiveRadiance = emissive;",
+
+                // THREE.ShaderChunk['map_fragment'],
+
+                "	float scale = 50.0;",
+
+                "	vec2 scaledUv = vec2(vUv.x * scale, vUv.y * scale);",
+
+                "	vec4 texelColor = texture2D( map, scaledUv );",
+
                 "   vec3 diffuse = vec3(0.0);",
 
                 "   #if NUM_DIR_LIGHTS > 0",
 
                 "       for (int i = 0; i < NUM_DIR_LIGHTS; i++) {",
 
-                "           vec3 direction = directionalLights[ i ].direction;",
+                "           vec3 direction = directionalLights[ i ].direction;",    // 视点坐标系下
                 "           vec3 color = directionalLights[ i ].color;",
 
-                "           vec4 lightVector = viewMatrix * vec4(direction, 0.0);",
-                "           float normalModulator = dot(normalize(vViewNormal), normalize(lightVector.xyz));",
-                "           diffuse += normalModulator * color;",
+                // "vec4 lightVector = viewMatrix * vec4(directionalLightDirection[i], 0.0);",
+                // "float normalModulator = dot(normalize(vViewNormal), normalize(lightVector.xyz));",
+                // "diffuse += normalModulator * directionalLightColor[i];",
+
+                // "           vec4 lightVector = viewMatrix * vec4(directionalLights[ 0 ].direction, 0.0);",
+                "           vec3 L = normalize(direction);",
+                "           vec3 N = normalize(vViewNormal);",
+                "           diffuse += (0.1 + dot(N, L)) * vec3(color.x);",
+                //"           diffuse += vec3(0.4 * color.x, 0.4 * color.x, 0.4 * color.z);",
 
                 "       }",
 
@@ -280,7 +422,8 @@ let GPUSculpt = (function () {
 
                 //combine components to get final color
                 // "vec3 finalColor = uBaseColor * (ambient + diffuse);",
-                "   vec3 finalColor = uBaseColor * diffuse;",
+                // "   vec3 finalColor = uBaseColor * diffuse;",
+                "   vec3 finalColor = diffuse * texelColor.xyz;",
 
                 //mix in cursor color
                 "   if (uShowCursor == 1) {",
@@ -289,11 +432,11 @@ let GPUSculpt = (function () {
                 // "       finalColor = vec3(1.0, 0.0, 0.0);",
                 "   }",
 
-                "   gl_FragColor = vec4(finalColor, 1.0);",
+                "   gl_FragColor = vec4(finalColor * ( 0.3 + getShadowMask() ), 1.0);",
 
                 "}"
 
-            ].join('\n')
+            ].join("\n")
 
         }
 
@@ -351,7 +494,7 @@ let GPUSculpt = (function () {
         //setup a reset material for clearing render targets
         this._clearMaterial = new THREE.ShaderMaterial({
             uniforms: {
-                uColor: { type: 'v4', value: new THREE.Vector4() }
+                uColor: { type: "v4", value: new THREE.Vector4() }
             },
             vertexShader: this.shaders.vert['passUv'],
             fragmentShader: this.shaders.frag['setColor']
@@ -365,33 +508,76 @@ let GPUSculpt = (function () {
                 THREE.UniformsLib['displacementmap'],
                 THREE.UniformsLib['lights'],
                 {
-                    uTexture: { type: 't', value: null },
-                    uTexelSize: { type: 'v2', value: new THREE.Vector2(1.0 / this.res, 1.0 / this.res) },
-                    uTexelWorldSize: { type: 'v2', value: new THREE.Vector2(this.gridSize, this.gridSize) },
-                    uHeightMultiplier: { type: 'f', value: 1.0 },
-                    uBaseColor: { type: 'v3', value: new THREE.Vector3(0.6, 0.8, 0.0) },
-                    uShowCursor: { type: 'i', value: 0 },
-                    uCursorPos: { type: 'v2', value: new THREE.Vector2() },
-                    uCursorRadius: { type: 'f', value: 0.0 },
-                    uCursorColor: { type: 'v3', value: new THREE.Vector3() }
+                    uTexture: { type: "t", value: null },
+                    uTexelSize: { type: "v2", value: new THREE.Vector2(1.0 / this.res, 1.0 / this.res) },
+                    uTexelWorldSize: { type: "v2", value: new THREE.Vector2(this.gridSize, this.gridSize) },
+                    uHeightMultiplier: { type: "f", value: 1.0 },
+                    uBaseColor: { type: "v3", value: new THREE.Vector3(0.6, 0.8, 0.0) },
+                    uShowCursor: { type: "i", value: 0 },
+                    uCursorPos: { type: "v2", value: new THREE.Vector2() },
+                    uCursorRadius: { type: "f", value: 0.0 },
+                    uCursorColor: { type: "v3", value: new THREE.Vector3() }
                 }
             ]),
             vertexShader: this.shaders.vert['heightMap'],
             fragmentShader: this.shaders.frag['lambertCursor'],
+            // fragmentShader: this.shaders.frag['lambert'],
             lights: true
         });
 
+        let texture = new THREE.DataTexture(new Float32Array([0.8, 0.8, 0.8, 1.0, 0.2, 0.2, 0.2, 1.0, 0.2, 0.2, 0.2, 1.0, 0.8, 0.8, 0.8, 1.0]), 2, 2, THREE.RGBAFormat, THREE.FloatType, undefined, THREE.RepeatWrapping, THREE.RepeatWrapping, THREE.LinearFilter, THREE.LinearMipMapLinearFilter);
+
+        const texLoader = new THREE.TextureLoader();
+        let tex = texLoader.load('grid.png');
+        tex.wrapS = THREE.RepeatWrapping;
+        tex.wrapT = THREE.RepeatWrapping;
+
+        this.mesh.material.uniforms['map'].value = tex;
+
+        // this.mesh.material = new THREE.ShaderMaterial({
+
+        //     uniforms: THREE.UniformsUtils.merge([
+        //         THREE.UniformsLib.common,
+        //         THREE.UniformsLib.specularmap,
+        //         THREE.UniformsLib.envmap,
+        //         THREE.UniformsLib.aomap,
+        //         THREE.UniformsLib.lightmap,
+        //         THREE.UniformsLib.emissivemap,
+        //         THREE.UniformsLib.fog,
+        //         THREE.UniformsLib.lights,
+        //         {
+        //             uTexture: { type: "t", value: null },
+        //             uTexelSize: { type: "v2", value: new THREE.Vector2(1.0 / this.res, 1.0 / this.res) },
+        //             uTexelWorldSize: { type: "v2", value: new THREE.Vector2(this.gridSize, this.gridSize) },
+        //             uHeightMultiplier: { type: "f", value: 1.0 },
+        //             uBaseColor: { type: "v3", value: new THREE.Vector3(0.6, 0.8, 0.0) },
+        //             uShowCursor: { type: "i", value: 0 },
+        //             uCursorPos: { type: "v2", value: new THREE.Vector2() },
+        //             uCursorRadius: { type: "f", value: 0.0 },
+        //             uCursorColor: { type: "v3", value: new THREE.Vector3() },
+
+        //             emissive: { value: new THREE.Color(0x000000) },
+        //             diffuse: { value: new THREE.Vector3(0.6, 0.8, 0.0) },
+        //             opacity: { value: 1.0 }
+        //         }
+        //     ]),
+
+        //     vertexShader: this.shaders.vert['heightMap'],
+        //     fragmentShader: this.shaders.frag['lambert'],
+
+        // });
+
         this._sculptMaterial = new THREE.ShaderMaterial({
             uniforms: {
-                uBaseTexture: { type: 't', value: null },
-                uSculptTexture1: { type: 't', value: null },
-                uTexelSize: { type: 'v2', value: new THREE.Vector2(this.texelSize, this.texelSize) },
-                uTexelWorldSize: { type: 'v2', value: new THREE.Vector2(this.size / this.res, this.size / this.res) },
-                uIsSculpting: { type: 'i', value: 0 },
-                uSculptType: { type: 'i', value: 0 },
-                uSculptPos: { type: 'v2', value: new THREE.Vector2() },
-                uSculptAmount: { type: 'f', value: 0.01 },
-                uSculptRadius: { type: 'f', value: 0.0 }
+                uBaseTexture: { type: "t", value: null },
+                uSculptTexture1: { type: "t", value: null },
+                uTexelSize: { type: "v2", value: new THREE.Vector2(this.texelSize, this.texelSize) },
+                uTexelWorldSize: { type: "v2", value: new THREE.Vector2(this.size / this.res, this.size / this.res) },
+                uIsSculpting: { type: "i", value: 0 },
+                uSculptType: { type: "i", value: 0 },
+                uSculptPos: { type: "v2", value: new THREE.Vector2() },
+                uSculptAmount: { type: "f", value: 0.01 },
+                uSculptRadius: { type: "f", value: 0.0 }
             },
             vertexShader: this.shaders.vert['passUv'],
             fragmentShader: this.shaders.frag['sculpt']
@@ -399,8 +585,8 @@ let GPUSculpt = (function () {
 
         this._combineTexturesMaterial = new THREE.ShaderMaterial({
             uniforms: {
-                uTexture1: { type: 't', value: null },
-                uTexture2: { type: 't', value: null }
+                uTexture1: { type: "t", value: null },
+                uTexture2: { type: "t", value: null }
             },
             vertexShader: this.shaders.vert['passUv'],
             fragmentShader: this.shaders.frag['combineTextures']
@@ -460,7 +646,7 @@ let GPUSculpt = (function () {
             // terrainHeight: terrainImageSettings[Object.keys(terrainImageSettings)[0]].height,
             sculptSize: 1.5,
             sculptAmount: 0.04,
-            sculptClearSculpts: function () {
+            clearSculpts: function () {
                 this.clear();
             }.bind(this),
             // renderingShadows: true,
@@ -469,16 +655,16 @@ let GPUSculpt = (function () {
         };
 
         //Sculpt folder
-        let sculptFolder = gui.addFolder('Sculpt');
-        sculptFolder.add(options, 'sculptSize', 0.1, 10.0).name('Brush Size').onChange((value) => {
+        let sculptFolder = gui.addFolder("Sculpt");
+        sculptFolder.add(options, "sculptSize", 0.1, 10.0).name("Brush Size").onChange((value) => {
             this.setBrushSize(value);
         });
         this.setBrushSize(options.sculptSize);
-        sculptFolder.add(options, 'sculptAmount', 0.01, 0.2).step(0.01).name('Amount').onChange((value) => {
+        sculptFolder.add(options, "sculptAmount", 0.01, 0.2).step(0.01).name("Amount").onChange((value) => {
             this.setBrushAmount(value);
         });
         this.setBrushAmount(options.sculptAmount);
-        sculptFolder.add(options, 'sculptClearSculpts').name('Clear Sculpts');
+        sculptFolder.add(options, "clearSculpts").name("Clear Sculpts");
 
         sculptFolder.open();
     }
@@ -532,8 +718,8 @@ let GPUSculpt = (function () {
             //need to rebind _rttCombinedLayer to uTexture
             this.mesh.material.uniforms['uTexture'].value = this._rttCombinedLayer.texture;
 
-            //check for the callback of type 'update'
-            // if (this.callbacks.hasOwnProperty('update')) {
+            //check for the callback of type "update"
+            // if (this.callbacks.hasOwnProperty("update")) {
             //     let renderCallbacks = this.callbacks['update'];
             //     let i, len;
             //     for (i = 0, len = renderCallbacks.length; i < len; i++) {
@@ -582,8 +768,8 @@ let GPUSculpt = (function () {
             let w = this.res,
                 h = this.res;
 
-            let _canvas = document.createElement('canvas'),
-                ctx = _canvas.getContext('2d');
+            let _canvas = document.createElement("canvas"),
+                ctx = _canvas.getContext("2d");
 
             _canvas.width = w;
             _canvas.height = h;
@@ -671,11 +857,28 @@ let GPUSculpt = (function () {
     };
     /**
      * Gets the sculpt texture that is used for displacement of mesh
-     * @return {THREE.WebGLRenderTarget} Sculpt texture that is used for displacement of mesh
+     * @return {Texture} Sculpt texture that is used for displacement of mesh
      */
     GPUSculpt.prototype.getSculptDisplayTexture = function () {
         return this._rttCombinedLayer.texture;
     };
+
+    GPUSculpt.prototype.getPixelData = function () {
+
+        // create buffer for reading single pixel
+        let pixelBuffer = new Float32Array(this.res * this.res);	// RGBA
+        let data = new Float32Array(4 * this.res * this.res);
+
+        this.renderer.readRenderTargetPixels(this._rttCombinedLayer, 0, 0, this.res, this.res, data);
+        // read the pixel
+        for (let i = 0; i < pixelBuffer.length; i++) {
+
+            pixelBuffer[i] = data[4 * i];
+
+        }
+
+        return pixelBuffer;
+    }
 
     /**
      * Add sculpt operation
