@@ -34,7 +34,7 @@ DW.Engine = (function () {
         this.environment = null;
         this.camera = null;
         this.renderer = null;
-        this.control = null;
+        this.controls = null;
         this.raycaster = null;
         this.mouse = null;
 
@@ -76,7 +76,8 @@ DW.Engine = (function () {
         this.renderer = new THREE.WebGLRenderer({
             canvas: this.canvas,
             antialias: this.antialias,
-            preserveDrawingBuffer: true
+            preserveDrawingBuffer: true,
+            // alpha: true
         });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.setClearColor(0x9a9a9a);
@@ -130,197 +131,57 @@ DW.Engine = (function () {
 
     Engine._initControl = function () {
 
-        this.control = new OrbitControls(this.camera, this.renderer.domElement);
-        // this.control.enableDamping = true;
-        // this.control.dampingFactor = 0.05;
-        // this.control.maxPolarAngle = 1.5;
-        this.control.update();
+        this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+        // this.controls.enableDamping = true;
+        // this.controls.dampingFactor = 0.05;
+        // this.controls.maxPolarAngle = 1.5;
+        this.controls.update();
+
+
+        /**
+         * Select Controls
+         */
+
+        let selectControls = new SelectControls(this.camera, this.renderer.domElement, this.scene.children);
+        this.selectControls = selectControls;
+        this.environment.add(this.selectControls);
+
+        selectControls.addEventListener('dragging-changed', (event) => {
+            this.controls.enabled = !event.value;    // 禁用 OrbitControls
+        });
+
+        selectControls.addEventListener('mouseDown', (e) => {
+
+            if (selectControls.object) {
+
+                document.addEventListener("mousemove", handleMove);
+
+                selectControls.addEventListener('mouseUp', (e) => {
+                    document.removeEventListener("mousemove", handleMove);
+                });
+            }
+        });
+
+        function handleMove() {
+            if (selectControls.object.rigidbody_object) {
+                MAIN_aftertrans_update(selectControls.object);
+            }
+        }
 
         window.addEventListener('keydown', (event) => {
             // console.log(event);
 
             switch (event.keyCode) {
                 case 110:
-                    if (this.transformControls.object) {
+                    if (selectControls.object) {
                         let position = new THREE.Vector3();
-                        position.copy(this.transformControls.object.position);
-                        this.control.target = position;
+                        position.copy(selectControls.object.position);
+                        this.controls.target = position;
                     }
                     break;
             }
 
         });
-
-        this.transformControls = new TransformControls(this.camera, this.renderer.domElement);
-        this.environment.add(this.transformControls);
-
-        /**
-         * Select Controls
-        */
-        // this.objectCollections = [];
-
-        // this.scene.traverse((child) => {
-        //     if (child.children.length == 0)
-        //     this.objectCollections.push(child);
-        // });
-
-        (function (_canvas, _camera, _scene) {
-            // const controls = new OrbitControls(_camera, _canvas);
-            // console.log(_scene);
-
-            const raycaster = new THREE.Raycaster();
-            const mouse = new THREE.Vector2();
-
-            let onDownPosition = new THREE.Vector2();
-            let onUpPosition = new THREE.Vector2();
-
-            let transformControls = this.transformControls;
-
-            /** 
-             * 更改模式
-            */
-            window.addEventListener('keydown', (event) => {
-                // console.log(event.keyCode);
-                switch (event.code) {
-                    case "KeyT": // Translate
-                        transformControls.setMode('translate');
-                        break;
-                    case "KeyR": // Rotate
-                        transformControls.setMode('rotate');
-                        break;
-                    case "KeyS": // Rotate
-                        transformControls.setMode('scale');
-                        break;
-                }
-            });
-
-            let box3Helper = new THREE.Box3Helper(new THREE.Box3(), 0xffff00);
-            box3Helper.material.depthTest = false;
-            box3Helper.material.transparent = true;
-            box3Helper.visible = false;
-            transformControls.box3Helper = box3Helper;
-
-            transformControls.addEventListener('dragging-changed', (event) => {
-
-                this.control.enabled = !event.value;    // 禁用 OrbitControls
-
-            });
-            transformControls.addEventListener('mouseDown', (event) => {
-
-                if (transformControls.object.body) {
-
-                    transformControls.object.body.sleep();
-
-                    document.body.addEventListener('mousemove', handleMove);
-
-                    transformControls.addEventListener('mouseUp', (event) => {
-
-                        transformControls.object.body.wakeUp();
-
-                        document.body.removeEventListener('mousemove', handleMove);
-
-                    });
-                }
-
-            });
-
-
-            function handleMove(event) {
-
-                transformControls.object.body.position.copy(transformControls.object.position);
-                transformControls.object.body.velocity.set(0, 0, 0);
-                // transformControls.object.body.angularVelocity.set(0, 0, 0);
-                // transformControls.object.body.quaternion.setFromAxisAngle(new CANNON.Vec3(0, 0, 1), 0);
-
-            }
-
-            document.body.addEventListener('mousedown', onMouseDown, false);
-            // document.body.addEventListener('touchstart', onTouchStart, false);
-
-            function onMouseDown(event) {
-
-                // event.preventDefault();
-
-                onDownPosition = getMousePosition(_canvas, event.clientX, event.clientY);
-
-                document.addEventListener('mouseup', onMouseUp, false);
-
-            }
-
-            function onMouseUp(event) {
-
-                onUpPosition = getMousePosition(_canvas, event.clientX, event.clientY);
-
-                handleClick();
-
-                document.removeEventListener('mouseup', onMouseUp, false);
-
-            }
-
-            function getMousePosition(dom, x, y) {
-
-                let rect = dom.getBoundingClientRect();
-
-                let p_x = (x - rect.left) / rect.width,
-                    p_y = (y - rect.top) / rect.height;
-
-                return new THREE.Vector2(p_x, p_y);
-
-            }
-
-            // object picking
-
-            function getIntersects(point, objects) {
-
-                mouse.set((point.x * 2) - 1, - (point.y * 2) + 1);
-
-                raycaster.setFromCamera(mouse, _camera);
-
-                return raycaster.intersectObjects(objects);
-
-            }
-
-            function handleClick() {
-
-                if (onDownPosition.distanceTo(onUpPosition) === 0) {
-
-                    transformControls.detach();
-                    transformControls.box3Helper.visible = false;
-                    if (transformControls.box3Helper.parent) {
-                        transformControls.box3Helper.parent.remove(transformControls.box3Helper);
-                    }
-
-                    let objectCollections = [];
-
-                    _scene.traverse((child) => {
-                        if (child.children.length == 0)
-                            objectCollections.push(child);
-                    });
-
-                    // console.log(objectCollections);
-
-
-                    let intersects = getIntersects(onUpPosition, objectCollections);
-
-                    if (intersects.length > 0) {
-
-                        let object = intersects[0].object;
-                        object.geometry.computeBoundingBox();
-
-                        transformControls.attach(object);
-
-                        transformControls.box3Helper.visible = true;
-                        transformControls.box3Helper.box.copy(object.geometry.boundingBox);
-
-                        object.add(transformControls.box3Helper);
-
-                        // console.log(transformControls.box3Helper);
-                    }
-
-                }
-
-            }
-        }.bind(this))(this.renderer.domElement, this.camera, this.scene);
 
     }
 
@@ -385,7 +246,7 @@ DW.Engine = (function () {
 
         });
         this.gui.add(this.options, 'message');
-        this.gui.add(this.options, 'save_as_picture');
+        this.gui.add(this.options, 'save_as_picture').name('Save as picture');
 
     }
 
@@ -408,12 +269,12 @@ DW.Engine = (function () {
 
         this.renderer.render(this.environment, this.camera);
 
-        this.control.update();
+        this.controls.update();
 
         // this.world.step(this.timestep);
 
         // this.scene.traverse((child) => {
-        // if ((!this.transformControls.dragging || this.transformControls.object !== child) && child.body) {
+        // if ((!selectControls.dragging || selectControls.object !== child) && child.body) {
         // child.position.copy(child.body.position);
         // child.quaternion.copy(child.body.quaternion);
         // }
@@ -455,5 +316,129 @@ DW.Engine = (function () {
 
 
 })();
+
+/**
+ * Select Controls
+ * @param {Array} objects 
+ */
+function SelectControls(camera, domElement, objects) {
+
+    TransformControls.call(this, camera, domElement);
+
+    this.objects = objects;
+
+    this.raycaster = new THREE.Raycaster();
+    this.mouse = new THREE.Vector2();
+
+    this.box3Helper = new THREE.Box3Helper(new THREE.Box3(), 0xffff00);
+    this.box3Helper.material.depthTest = false;
+    this.box3Helper.material.transparent = true;
+    this.box3Helper.visible = false;
+
+    let onDownPosition = new THREE.Vector2();
+    let onUpPosition = new THREE.Vector2();
+
+	/** 
+	 * 更改模式
+	 */
+    window.addEventListener('keydown', (event) => {
+        // console.log(event);
+        switch (event.code) {
+            case 'KeyT': // Translate
+                this.setMode('translate');
+                break;
+            case 'KeyR': // Rotate
+                this.setMode('rotate');
+                break;
+            case 'KeyS': // Scale
+                this.setMode('scale');
+                break;
+        }
+    });
+
+    domElement.addEventListener('mousedown', onMouseDown.bind(this), false);
+    // domElement.addEventListener('touchstart', onTouchStart, false);
+
+    function onMouseDown(event) {
+
+        // event.preventDefault();
+
+        onDownPosition = getMousePosition(domElement, event.clientX, event.clientY);
+
+        document.addEventListener('mouseup', onMouseUp.bind(this), false);
+
+    }
+
+    function onMouseUp(event) {
+
+        onUpPosition = getMousePosition(domElement, event.clientX, event.clientY);
+
+        analize.bind(this)();
+
+        document.removeEventListener('mouseup', onMouseUp.bind(this), false);
+
+    }
+
+
+    function getMousePosition(dom, x, y) {
+
+        let rect = dom.getBoundingClientRect();
+
+        let p_x = (x - rect.left) / rect.width,
+            p_y = (y - rect.top) / rect.height;
+
+        return new THREE.Vector2(p_x, p_y);
+
+    }
+
+    // object picking
+
+    function getIntersects(point, objects) {
+
+        this.mouse.set((point.x * 2) - 1, - (point.y * 2) + 1);
+
+        this.raycaster.setFromCamera(this.mouse, camera);
+
+        return this.raycaster.intersectObjects(objects);
+
+    }
+
+    function analize() {
+
+        if (onDownPosition.distanceTo(onUpPosition) === 0) {
+
+            this.detach();
+            this.box3Helper.visible = false;
+            if (this.box3Helper.parent) {
+                this.box3Helper.parent.remove(this.box3Helper);
+            }
+
+            let intersects = getIntersects.bind(this)(onUpPosition, this.objects);
+
+            if (intersects.length > 0) {
+
+                let object = intersects[0].object;
+                this.select(object);
+
+            }
+
+        }
+
+    }
+
+}
+SelectControls.prototype = Object.create(TransformControls.prototype);
+SelectControls.prototype.constructor = TransformControls;
+
+SelectControls.prototype.select = function (object) {
+    object.geometry.computeBoundingBox();
+
+    this.attach(object);
+
+    this.box3Helper.visible = true;
+    this.box3Helper.box.copy(object.geometry.boundingBox);
+
+    object.add(this.box3Helper);
+}
 
 export default DW;
